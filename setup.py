@@ -116,6 +116,10 @@ HBASE_REQUIRED = [
     "happybase>=1.2.0,<3",
 ]
 
+CASSANDRA_REQUIRED = [
+    "cassandra-driver>=3.24.0,<4",
+]
+
 GE_REQUIRED = ["great_expectations>=0.14.0,<0.15.0"]
 
 GO_REQUIRED = [
@@ -176,6 +180,7 @@ CI_REQUIRED = (
     + TRINO_REQUIRED
     + GE_REQUIRED
     + HBASE_REQUIRED
+    + CASSANDRA_REQUIRED
 )
 
 DEV_REQUIRED = ["mypy-protobuf==3.1", "grpcio-testing==1.*"] + CI_REQUIRED
@@ -480,6 +485,7 @@ setup(
         "ge": GE_REQUIRED,
         "hbase": HBASE_REQUIRED,
         "go": GO_REQUIRED,
+        "cassandra": CASSANDRA_REQUIRED,
     },
     include_package_data=True,
     license="Apache",

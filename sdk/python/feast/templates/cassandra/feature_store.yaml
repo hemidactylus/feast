@@ -1,0 +1,8 @@
+project: my_project
+registry: data/registry.db
+provider: local
+online_store:
+    type: cassandra
+    hosts:
+        - 127.0.0.1
+    keyspace: feast_keyspace
