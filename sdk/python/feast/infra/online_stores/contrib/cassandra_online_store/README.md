@@ -30,15 +30,19 @@ and username/password only if the database requires authentication.
 ```yaml
 [...]
 online_store:
-    type: feast_cassandra_online_store.cassandra_online_store.CassandraOnlineStore
+    type: cassandra
     hosts:
         - 192.168.1.1
         - 192.168.1.2
         - 192.168.1.3
     keyspace: KeyspaceName
-    port: 9042        # optional
-    username: user    # optional
-    password: secret  # optional
+    port: 9042                                                              # optional
+    username: user                                                          # optional
+    password: secret                                                        # optional
+    protocol_version: 5                                                     # optional
+    load_balancing:                                                         # optional
+        local_dc: 'datacenter1'                                             # optional
+        load_balancing_policy: 'TokenAwarePolicy(DCAwareRoundRobinPolicy)'  # optional
 ```
 
 ### Astra DB setup:
@@ -56,11 +60,16 @@ its full path must be given in the configuration below:
 ```yaml
 [...]
 online_store:
-    type: feast_cassandra_online_store.cassandra_online_store.CassandraOnlineStore
+    type: cassandra
     secure_bundle_path: /path/to/secure/bundle.zip
     keyspace: KeyspaceName
     username: Client_ID
     password: Client_Secret
+    protocol_version: 4                                                     # optional
+    load_balancing:                                                         # optional
+        local_dc: 'eu-central-1'                                            # optional
+        load_balancing_policy: 'TokenAwarePolicy(DCAwareRoundRobinPolicy)'  # optional
+
 ```
 
 ### More info
