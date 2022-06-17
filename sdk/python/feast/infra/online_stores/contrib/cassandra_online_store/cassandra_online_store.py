@@ -270,8 +270,17 @@ class CassandraOnlineStore(OnlineStore):
         return self._session
 
     def __del__(self):
-        if self._session:
-            self._session.shutdown()
+        """
+        One may be tempted to reclaim resources and do, here:
+            if self._session:
+                self._session.shutdown()
+        But *beware*, DON'T DO THIS.
+        Indeed this could destroy the session object before some internal
+        tasks runs in other threads (this is handled internally in the
+        Cassandra driver).
+        You'd get a RuntimeError "cannot schedule new futures after shutdown".
+        """
+        pass
 
     @log_exceptions_and_usage(online_store="cassandra")
     def online_write_batch(
