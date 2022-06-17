@@ -101,7 +101,6 @@ def collect_cassandra_store_settings():
             default='TokenAwarePolicy(DCAwareRoundRobinPolicy)',
         )
     else:
-        c_protocol_version = None
         c_local_dc = None
         c_load_balancing_policy = None
 
