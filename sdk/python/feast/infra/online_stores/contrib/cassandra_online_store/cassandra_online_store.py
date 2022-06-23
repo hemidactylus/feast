@@ -4,8 +4,7 @@ Cassandra/Astra DB online store for Feast.
 
 import logging
 from datetime import datetime
-from typing import (Sequence, List, Optional, Tuple, Dict, Callable,
-                    Any, Iterable)
+from typing import Sequence, List, Optional, Tuple, Dict, Callable, Any, Iterable
 
 from feast import RepoConfig, FeatureView, Entity
 from feast.infra.key_encoding_utils import serialize_entity_key
@@ -20,6 +19,7 @@ from pydantic.typing import Literal
 
 from cassandra.cluster import Cluster, Session, ResultSet
 from cassandra.auth import PlainTextAuthProvider
+
 #
 from cassandra.policies import DCAwareRoundRobinPolicy, TokenAwarePolicy
 from cassandra.cluster import ExecutionProfile
@@ -27,8 +27,7 @@ from cassandra.cluster import EXEC_PROFILE_DEFAULT
 
 # Error messages
 E_CASSANDRA_UNEXPECTED_CONFIGURATION_CLASS = (
-    "Unexpected configuration object (not a "
-    "CassandraOnlineStoreConfig instance)"
+    "Unexpected configuration object (not a CassandraOnlineStoreConfig instance)"
 )
 E_CASSANDRA_NOT_CONFIGURED = (
     "Inconsistent Cassandra configuration: provide exactly one between "
@@ -46,16 +45,19 @@ E_CASSANDRA_UNKNOWN_LB_POLICY = (
 )
 
 # CQL command templates (that is, before replacing schema names)
-INSERT_CQL_4_TEMPLATE = ("INSERT INTO {fqtable} (feature_name,"
-                         " value, entity_key, event_ts) VALUES"
-                         " (?, ?, ?, ?);")
+INSERT_CQL_4_TEMPLATE = (
+    "INSERT INTO {fqtable} (feature_name,"
+    " value, entity_key, event_ts) VALUES"
+    " (?, ?, ?, ?);"
+)
 
-INSERT_CQL_5_TEMPLATE = ("INSERT INTO {fqtable} (feature_name, "
-                         "value, entity_key, event_ts, created_ts)"
-                         " VALUES (?, ?, ?, ?, ?);")
+INSERT_CQL_5_TEMPLATE = (
+    "INSERT INTO {fqtable} (feature_name, "
+    "value, entity_key, event_ts, created_ts)"
+    " VALUES (?, ?, ?, ?, ?);"
+)
 
-SELECT_CQL_TEMPLATE = ("SELECT {columns} FROM {fqtable}"
-                       " WHERE entity_key = ?;")
+SELECT_CQL_TEMPLATE = "SELECT {columns} FROM {fqtable} WHERE entity_key = ?;"
 
 CREATE_TABLE_CQL_TEMPLATE = """
     CREATE TABLE IF NOT EXISTS {fqtable} (
@@ -73,12 +75,12 @@ DROP_TABLE_CQL_TEMPLATE = "DROP TABLE IF EXISTS {fqtable};"
 # op_name -> (cql template string, prepare boolean)
 CQL_TEMPLATE_MAP = {
     # Queries/DML, statements to be prepared
-    'insert4': (INSERT_CQL_4_TEMPLATE, True),
-    'insert5': (INSERT_CQL_5_TEMPLATE, True),
-    'select': (SELECT_CQL_TEMPLATE, True),
+    "insert4": (INSERT_CQL_4_TEMPLATE, True),
+    "insert5": (INSERT_CQL_5_TEMPLATE, True),
+    "select": (SELECT_CQL_TEMPLATE, True),
     # DDL, do not prepare these
-    'drop': (DROP_TABLE_CQL_TEMPLATE, False),
-    'create': (CREATE_TABLE_CQL_TEMPLATE, False),
+    "drop": (DROP_TABLE_CQL_TEMPLATE, False),
+    "create": (CREATE_TABLE_CQL_TEMPLATE, False),
 }
 
 # Logger
@@ -101,8 +103,10 @@ class CassandraOnlineStoreConfig(FeastConfigBaseModel):
     If connecting to Astra DB, authentication must be provided with username
     and password being the Client ID and Client Secret of the database token.
     """
-    _full_class_name = ("feast_cassandra_online_store.cassandra_online_store"
-                        ".CassandraOnlineStore")
+
+    _full_class_name = (
+        "feast_cassandra_online_store.cassandra_online_store.CassandraOnlineStore"
+    )
     #
     type: Literal["cassandra", _full_class_name] = _full_class_name
     """Online store type selector."""
@@ -152,6 +156,7 @@ class CassandraOnlineStoreConfig(FeastConfigBaseModel):
     wrapped into an execution profile if present.
     """
 
+
 class CassandraOnlineStore(OnlineStore):
     """
     Cassandra/Astra DB online store implementation for Feast.
@@ -179,9 +184,7 @@ class CassandraOnlineStore(OnlineStore):
 
         online_store_config = config.online_store
         if not isinstance(online_store_config, CassandraOnlineStoreConfig):
-            raise CassandraInvalidConfig(
-                E_CASSANDRA_UNEXPECTED_CONFIGURATION_CLASS
-            )
+            raise CassandraInvalidConfig(E_CASSANDRA_UNEXPECTED_CONFIGURATION_CLASS)
 
         if self._session:
             return self._session
@@ -205,8 +208,7 @@ class CassandraOnlineStore(OnlineStore):
 
             if username is not None:
                 auth_provider = PlainTextAuthProvider(
-                    username=username,
-                    password=password,
+                    username=username, password=password,
                 )
             else:
                 auth_provider = None
@@ -216,21 +218,21 @@ class CassandraOnlineStore(OnlineStore):
                 # construct a proper execution profile embedding
                 # the configured LB policy
                 _lbp_name = online_store_config.load_balancing.load_balancing_policy
-                if _lbp_name == 'DCAwareRoundRobinPolicy':
+                if _lbp_name == "DCAwareRoundRobinPolicy":
                     lb_policy = DCAwareRoundRobinPolicy(
                         local_dc=online_store_config.load_balancing.local_dc,
                     )
-                elif _lbp_name == 'TokenAwarePolicy(DCAwareRoundRobinPolicy)':
-                    lb_policy = TokenAwarePolicy(DCAwareRoundRobinPolicy(
-                        local_dc=online_store_config.load_balancing.local_dc,
-                    ))
+                elif _lbp_name == "TokenAwarePolicy(DCAwareRoundRobinPolicy)":
+                    lb_policy = TokenAwarePolicy(
+                        DCAwareRoundRobinPolicy(
+                            local_dc=online_store_config.load_balancing.local_dc,
+                        )
+                    )
                 else:
                     raise CassandraInvalidConfig(E_CASSANDRA_UNKNOWN_LB_POLICY)
 
                 # wrap it up in a map of ex.profiles with a default
-                exe_profile = ExecutionProfile(
-                    load_balancing_policy = lb_policy,
-                )
+                exe_profile = ExecutionProfile(load_balancing_policy=lb_policy)
                 execution_profiles = {EXEC_PROFILE_DEFAULT: exe_profile}
             else:
                 execution_profiles = None
@@ -239,8 +241,8 @@ class CassandraOnlineStore(OnlineStore):
             cluster_kwargs = {
                 k: v
                 for k, v in {
-                    'protocol_version': protocol_version,
-                    'execution_profiles': execution_profiles,
+                    "protocol_version": protocol_version,
+                    "execution_profiles": execution_profiles,
                 }.items()
                 if v is not None
             }
@@ -248,17 +250,12 @@ class CassandraOnlineStore(OnlineStore):
             # creation of Cluster (Cassandra vs. Astra)
             if hosts:
                 self._cluster = Cluster(
-                    hosts,
-                    port=port,
-                    auth_provider=auth_provider,
-                    **cluster_kwargs,
+                    hosts, port=port, auth_provider=auth_provider, **cluster_kwargs
                 )
             else:
                 # we use 'secure_bundle_path'
                 self._cluster = Cluster(
-                    cloud={
-                        "secure_connect_bundle": secure_bundle_path,
-                    },
+                    cloud={"secure_connect_bundle": secure_bundle_path},
                     auth_provider=auth_provider,
                     **cluster_kwargs,
                 )
@@ -284,14 +281,13 @@ class CassandraOnlineStore(OnlineStore):
 
     @log_exceptions_and_usage(online_store="cassandra")
     def online_write_batch(
-            self,
-            config: RepoConfig,
-            table: FeatureView,
-            data: List[
-                Tuple[EntityKeyProto,
-                      Dict[str, ValueProto], datetime, Optional[datetime]]
-            ],
-            progress: Optional[Callable[[int], Any]],
+        self,
+        config: RepoConfig,
+        table: FeatureView,
+        data: List[
+            Tuple[EntityKeyProto, Dict[str, ValueProto], datetime, Optional[datetime]]
+        ],
+        progress: Optional[Callable[[int], Any]],
     ) -> None:
         """
         Write a batch of features of several entities to the database.
@@ -312,18 +308,25 @@ class CassandraOnlineStore(OnlineStore):
         for entity_key, values, timestamp, created_ts in data:
             entity_key_bin = serialize_entity_key(entity_key).hex()
             with tracing_span(name="remote_call"):
-                self._write_rows(config, project, table, entity_key_bin,
-                                 values.items(), timestamp, created_ts)
+                self._write_rows(
+                    config,
+                    project,
+                    table,
+                    entity_key_bin,
+                    values.items(),
+                    timestamp,
+                    created_ts,
+                )
             if progress:
                 progress(1)
 
     @log_exceptions_and_usage(online_store="cassandra")
     def online_read(
-            self,
-            config: RepoConfig,
-            table: FeatureView,
-            entity_keys: List[EntityKeyProto],
-            requested_features: Optional[List[str]] = None,
+        self,
+        config: RepoConfig,
+        table: FeatureView,
+        entity_keys: List[EntityKeyProto],
+        requested_features: Optional[List[str]] = None,
     ) -> List[Tuple[Optional[datetime], Optional[Dict[str, ValueProto]]]]:
         """
         Read feature values pertaining to the requested entities from
@@ -337,23 +340,27 @@ class CassandraOnlineStore(OnlineStore):
         """
         project = config.project
 
-        result: List[Tuple[Optional[datetime],
-                     Optional[Dict[str, ValueProto]]]] = []
+        result: List[Tuple[Optional[datetime], Optional[Dict[str, ValueProto]]]] = []
 
         for entity_key in entity_keys:
             entity_key_bin = serialize_entity_key(entity_key).hex()
 
             with tracing_span(name="remote_call"):
                 feature_rows = self._read_rows_by_entity_key(
-                    config, project, table, entity_key_bin,
+                    config,
+                    project,
+                    table,
+                    entity_key_bin,
                     proj=["feature_name", "value", "event_ts"],
                 )
 
             res = {}
             res_ts = None
             for feature_row in feature_rows:
-                if (requested_features is None
-                        or feature_row.feature_name in requested_features):
+                if (
+                    requested_features is None
+                    or feature_row.feature_name in requested_features
+                ):
                     val = ValueProto()
                     val.ParseFromString(feature_row.value)
                     res[feature_row.feature_name] = val
@@ -367,13 +374,13 @@ class CassandraOnlineStore(OnlineStore):
 
     @log_exceptions_and_usage(online_store="cassandra")
     def update(
-            self,
-            config: RepoConfig,
-            tables_to_delete: Sequence[FeatureView],
-            tables_to_keep: Sequence[FeatureView],
-            entities_to_delete: Sequence[Entity],
-            entities_to_keep: Sequence[Entity],
-            partial: bool,
+        self,
+        config: RepoConfig,
+        tables_to_delete: Sequence[FeatureView],
+        tables_to_keep: Sequence[FeatureView],
+        entities_to_delete: Sequence[Entity],
+        entities_to_keep: Sequence[Entity],
+        partial: bool,
     ):
         """
         Update schema on DB, by creating and destroying tables accordingly.
@@ -394,10 +401,10 @@ class CassandraOnlineStore(OnlineStore):
 
     @log_exceptions_and_usage(online_store="cassandra")
     def teardown(
-            self,
-            config: RepoConfig,
-            tables: Sequence[FeatureView],
-            entities: Sequence[Entity],
+        self,
+        config: RepoConfig,
+        tables: Sequence[FeatureView],
+        entities: Sequence[Entity],
     ):
         """
         Delete tables from the database.
@@ -413,16 +420,12 @@ class CassandraOnlineStore(OnlineStore):
                 self._drop_table(config, project, table)
 
     @staticmethod
-    def _fq_table_name(
-        keyspace: str,
-        project: str,
-        table: FeatureView,
-    ) -> str:
+    def _fq_table_name(keyspace: str, project: str, table: FeatureView) -> str:
         """
         Generate a fully-qualified table name,
         including quotes and keyspace.
         """
-        return f"\"{keyspace}\".\"{project}_{table.name}\""
+        return f'"{keyspace}"."{project}_{table.name}"'
 
     def _write_rows(
         self,
@@ -445,24 +448,15 @@ class CassandraOnlineStore(OnlineStore):
         #
         fqtable = CassandraOnlineStore._fq_table_name(keyspace, project, table)
         if created_ts is None:
-            insert_cql = self._get_cql_statement(
-                config,
-                'insert4',
-                fqtable=fqtable,
-            )
+            insert_cql = self._get_cql_statement(config, "insert4", fqtable=fqtable)
             fixed_vals = [entity_key_bin, timestamp]
         else:
-            insert_cql = self._get_cql_statement(
-                config,
-                'insert5',
-                fqtable=fqtable,
-            )
+            insert_cql = self._get_cql_statement(config, "insert5", fqtable=fqtable)
             fixed_vals = [entity_key_bin, timestamp, created_ts]
         #
         for feature_name, val in features_vals:
             session.execute(
-                insert_cql,
-                [feature_name, val.SerializeToString()] + fixed_vals,
+                insert_cql, [feature_name, val.SerializeToString()] + fixed_vals,
             )
 
     def _read_rows_by_entity_key(
@@ -480,51 +474,38 @@ class CassandraOnlineStore(OnlineStore):
         keyspace: str = self._keyspace
         #
         fqtable = CassandraOnlineStore._fq_table_name(keyspace, project, table)
-        columns="*" if proj is None else ", ".join(proj)
+        columns = "*" if proj is None else ", ".join(proj)
         select_cql = self._get_cql_statement(
-            config,
-            'select',
-            fqtable=fqtable,
-            columns=columns,
+            config, "select", fqtable=fqtable, columns=columns,
         )
         return session.execute(select_cql, [entity_key_bin])
 
     def _drop_table(
-        self,
-        config: RepoConfig,
-        project: str,
-        table: FeatureView,
+        self, config: RepoConfig, project: str, table: FeatureView,
     ):
         """Handle the CQL (low-level) deletion of a table."""
         session: Session = self._get_session(config)
         keyspace: str = self._keyspace
         #
         fqtable = CassandraOnlineStore._fq_table_name(keyspace, project, table)
-        drop_cql = self._get_cql_statement(config, 'drop', fqtable)
+        drop_cql = self._get_cql_statement(config, "drop", fqtable)
         logger.info(f"Deleting table {fqtable}.")
         session.execute(drop_cql)
 
     def _create_table(
-        self,
-        config: RepoConfig,
-        project: str,
-        table: FeatureView,
+        self, config: RepoConfig, project: str, table: FeatureView
     ):
         """Handle the CQL (low-level) creation of a table."""
         session: Session = self._get_session(config)
         keyspace: str = self._keyspace
         #
         fqtable = CassandraOnlineStore._fq_table_name(keyspace, project, table)
-        create_cql = self._get_cql_statement(config, 'create', fqtable)
+        create_cql = self._get_cql_statement(config, "create", fqtable)
         logger.info(f"Creating table {fqtable}.")
         session.execute(create_cql)
 
     def _get_cql_statement(
-        self,
-        config: RepoConfig,
-        op_name: str,
-        fqtable: str,
-        **kwargs,
+        self, config: RepoConfig, op_name: str, fqtable: str, **kwargs
     ):
         """
         Resolve an 'op_name' (create, insert4, etc) into a CQL statement
@@ -539,17 +520,13 @@ class CassandraOnlineStore(OnlineStore):
         session: Session = self._get_session(config)
         #
         template, prepare = CQL_TEMPLATE_MAP[op_name]
-        statement = template.format(
-            fqtable=fqtable,
-            **kwargs,
-        )
+        statement = template.format(fqtable=fqtable, **kwargs,)
         if prepare:
             # using the statement itself as key (no problem with that)
             cache_key = statement
             if cache_key not in self._prepared_statements:
                 logger.info(f"Preparing a {op_name} statement on {fqtable}.")
-                self._prepared_statements[cache_key] = \
-                    session.prepare(statement)
+                self._prepared_statements[cache_key] = session.prepare(statement)
             return self._prepared_statements[cache_key]
         else:
             return statement
