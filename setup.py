@@ -494,7 +494,7 @@ setup(
         "ge": GE_REQUIRED,
         "hbase": HBASE_REQUIRED,
         "go": GO_REQUIRED,
-	"docs": DOCS_REQUIRED,
+	    "docs": DOCS_REQUIRED,
         "cassandra": CASSANDRA_REQUIRED,
     },
     include_package_data=True,

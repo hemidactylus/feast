@@ -9,19 +9,34 @@ read/write from/to table and table destruction.
 
 ## Quick usage
 
-Once the package is installed, switching online store to Cassandra / Astra DB
-is a matter of altering the `online_store` key in `feature_store.yaml`.
+The following refers to the [Feast quickstart](https://docs.feast.dev/getting-started/quickstart) page. Only
+Step 2 ("Create a feature repository") is slightly different, as it involves
+a bit of specific configuration about the Astra DB / Cassandra cluster you
+are going to use.
 
-With reference to the [Feast quickstart](https://docs.feast.dev/getting-started/quickstart),
-the minimal steps are:
+It will be assumed that Feast has been installed in your system.
 
-1. (assuming both `feast` and this plugin are installed)
-2. creating a feature repository, `feast init feature_repo`;
-3. `cd feature_repo`;
-4. editing the `feature_store.yaml` as detailed below;
-5. all subsequent steps proceed as usual.
+### Creating the feature repository
 
-### Cassandra setup
+The easiest way to get started is to use the Feast CLI to initialize a new
+feature store. Once Feast is installed, the command
+
+```
+feast init FEATURE_STORE_NAME -t cassandra
+```
+
+will interactively help you create the `feature_store.yaml` with the
+required configuration details to access your Cassandra / Astra DB instance.
+
+Alternatively, you can run `feast init -t FEATURE_STORE_NAME`, as described
+in the quickstart, and then manually edit the `online_store` key in
+the `feature_store.yaml` file as detailed below.
+
+The following steps (setup of feature definitions, deployment of the store,
+generation of training data, materialization, fetching of online/offline
+features) proceed exactly as in the general Feast quickstart instructions.
+
+#### Cassandra setup
 
 The only required settings are `hosts` and `type`. The port number
 is to be provided only if different than the default (9042),
@@ -45,7 +60,7 @@ online_store:
         load_balancing_policy: 'TokenAwarePolicy(DCAwareRoundRobinPolicy)'  # optional
 ```
 
-### Astra DB setup:
+#### Astra DB setup:
 
 To point Feast to using an Astra DB instance as online store, an 
 [Astra DB token](https://awesome-astra.github.io/docs/pages/astra/create-token/#c-procedure)
@@ -71,6 +86,31 @@ online_store:
         load_balancing_policy: 'TokenAwarePolicy(DCAwareRoundRobinPolicy)'  # optional
 
 ```
+
+#### Protocol version and load-balancing settings
+
+Whether on Astra DB or Cassandra, there are some optional settings in the
+store definition yaml:
+
+```yaml
+    [...]
+    protocol_version: 5                                                     # optional
+    load_balancing:                                                         # optional
+        local_dc: 'datacenter1'                                             # optional
+        load_balancing_policy: 'TokenAwarePolicy(DCAwareRoundRobinPolicy)'  # optional
+```
+
+If you specify a protocol version (4 for `Astra DB` as of June 2022, 5 for `Cassandra 4.*`),
+you avoid the drivers having to negotiate it on their own, thus speeding up initialization
+time (and reducing the `INFO` messages being logged). See [this page](https://docs.datastax.com/en/developer/python-driver/3.25/api/cassandra/#cassandra.ProtocolVersion) for a listing
+of protocol versions.
+
+You should provide the load-balancing properties as well (the reference datacenter
+to use for the connection and the load-balancing policy to use). In a future version
+of the driver, according to the warnings issued in the logs, this will become mandatory.
+The former parameter is a region name for Astra DB instances (as can be verified on the Astra DB UI).
+See the source code of the online store integration for the allowed values of
+the latter parameter.
 
 ### More info
 
